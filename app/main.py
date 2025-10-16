@@ -33,4 +33,4 @@ def query_route(query: str, graph_id: str) -> str:
     else:
         relevant_subgraph_str = ''
 
-    return f'{relevant_subgraph_str}\ngraph_id={graph_id}'
+    return relevant_subgraph_str
