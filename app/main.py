@@ -1,6 +1,4 @@
-from typing import Optional
 from floggit import flog
-from google.genai import types
 from kg_service import get_relevant_neighborhood
 
 from fastapi import FastAPI
