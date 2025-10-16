@@ -33,11 +33,10 @@ steps:
     '--image=us-central1-docker.pkg.dev/${PROJECT_ID}/cloud-run-source-deploy/kg-read',
     '--region', 'us-central1',
     '--platform', 'managed',
-    '--memory=1Gi',
+    '--memory=2Gi',
     '--min-instances', '1',
     '--allow-unauthenticated',
     '--env-vars-file', '.env.yaml',
-    '--set-secrets=GOOGLE_API_KEY=VERTEX_AI_API_KEY:1'
   ]
   waitFor: ['Docker Push']
 
