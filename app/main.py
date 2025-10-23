@@ -7,8 +7,8 @@ app = FastAPI()
 
 @app.get('/random_neighborhood')
 @flog
-def random_neighborhood_route(user_id: str) -> dict:
-    return get_random_neighborhood(graph_id=user_id)
+def random_neighborhood_route(graph_id: str) -> dict:
+    return get_random_neighborhood(graph_id=graph_id)
 
 
 @app.get("/search")
