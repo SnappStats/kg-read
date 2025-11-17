@@ -12,6 +12,7 @@ dependencies = [
     "python-dotenv==1.1.0",
     "floggit>=0.0.19",
     "fastapi[standard]>=0.117.1",
+    "google-cloud-spanner>=3.59.0",
 ]
 
 [dependency-groups]
