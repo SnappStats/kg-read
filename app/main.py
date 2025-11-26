@@ -1,9 +1,30 @@
 from floggit import flog
 from kg_service import get_relevant_neighborhood, get_random_neighborhood
+from knowledge_curation_agent.main import main as _curate_knowledge
 
-from fastapi import FastAPI
+from fastapi import FastAPI, BackgroundTasks, Body
 
 app = FastAPI()
+
+
+from pydantic import BaseModel
+
+class CurateRequest(BaseModel):
+    query: str
+    user_id: str
+    graph_id: str
+
+@app.post('/curate_knowledge')
+def curate_knowledge_route(
+        data: CurateRequest,
+        background_tasks: BackgroundTasks = None) -> dict:
+    background_tasks.add_task(
+            _curate_knowledge,
+            graph_id=data.graph_id,
+            user_id=data.user_id,
+            query=data.query)
+    return 'All set. Any new or updated knowledge is being curated.'
+
 
 @app.get('/random_neighborhood')
 @flog
