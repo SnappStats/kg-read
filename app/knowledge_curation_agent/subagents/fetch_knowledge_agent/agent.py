@@ -8,6 +8,8 @@ from google.adk.planners import BuiltInPlanner
 from google.adk.tools import ToolContext
 from google.genai import types
 
+from get_relevant_neighborhood import main as _get_relevant_neighborhood
+
 load_dotenv()
 
 PROMPT = """
@@ -16,7 +18,6 @@ You are an agent with access to a knowledge graph. Your goal is to retrieve what
 Examine the user input to identify all key topics and entities, then use the `get_relevant_neighborhood` tool to retrieve relevant portions of the knowledge graph.
 """
 
-@flog
 def get_relevant_neighborhood(query: str, tool_context: ToolContext) -> dict:
     '''
     Args:
@@ -25,10 +26,9 @@ def get_relevant_neighborhood(query: str, tool_context: ToolContext) -> dict:
         dict: The relevant knowledge graph data.
     '''
     graph_id = tool_context.state['graph_id']
-    url = os.environ['KG_URL'] + '/search'
-    r = requests.get(url, params={'query': query, 'graph_id': graph_id})
-    tool_context.state['existing_knowledge'] = r.json()
-    return r.json()
+    nbhd = _get_relevant_neighborhood(query=query, graph_id=graph_id)
+    tool_context.state['existing_knowledge'] = nbhd
+    return nbhd
 
 
 agent = Agent(

@@ -1,5 +1,6 @@
 from floggit import flog
-from kg_service import get_relevant_neighborhood, get_random_neighborhood
+from get_relevant_neighborhood import main as get_relevant_neighborhood
+from get_random_neighborhood import main as get_random_neighborhood
 from knowledge_curation_agent.main import main as _curate_knowledge
 
 from fastapi import FastAPI, BackgroundTasks, Body
@@ -23,7 +24,7 @@ def curate_knowledge_route(
             graph_id=data.graph_id,
             user_id=data.user_id,
             query=data.query)
-    return 'All set. Any new or updated knowledge is being curated.'
+    return {'message': 'All set. Any new or updated knowledge is being curated.'}
 
 
 @app.get('/random_neighborhood')
