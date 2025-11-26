@@ -13,6 +13,7 @@ dependencies = [
     "floggit>=0.0.19",
     "fastapi[standard]>=0.117.1",
     "google-cloud-spanner>=3.59.0",
+    "google-adk>=1.18.0",
 ]
 
 [dependency-groups]
