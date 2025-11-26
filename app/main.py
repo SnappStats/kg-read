@@ -23,7 +23,7 @@ def curate_knowledge_route(
             graph_id=data.graph_id,
             user_id=data.user_id,
             query=data.query)
-    return 'All set. Any new or updated knowledge is being curated.'
+    return {'message': 'All set. Any new or updated knowledge is being curated.'}
 
 
 @app.get('/random_neighborhood')
