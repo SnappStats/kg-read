@@ -8,6 +8,8 @@ from google.adk.planners import BuiltInPlanner
 from google.adk.tools import ToolContext
 from google.genai import types
 
+from get_relevant_neighborhood import main as get_relevant_neighborhood
+
 load_dotenv()
 
 PROMPT = """
@@ -17,7 +19,7 @@ Examine the user input to identify all key topics and entities, then use the `ge
 """
 
 @flog
-def get_relevant_neighborhood(query: str, tool_context: ToolContext) -> dict:
+def x_get_relevant_neighborhood(query: str, tool_context: ToolContext) -> dict:
     '''
     Args:
         query (str): A query string representing relevant information (e.g. entities) to search for in the knowledge graph.

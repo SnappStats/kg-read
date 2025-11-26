@@ -1,5 +1,6 @@
 from floggit import flog
-from kg_service import get_relevant_neighborhood, get_random_neighborhood
+from get_relevant_neighborhood import main as get_relevant_neighborhood
+from get_random_neighborhood import main as get_random_neighborhood
 from knowledge_curation_agent.main import main as _curate_knowledge
 
 from fastapi import FastAPI, BackgroundTasks, Body
