@@ -13,11 +13,15 @@ def main(query: str, graph_id: str) -> dict:
     Returns:
         dict: A relevant subgraph of the knowledge graph, including a surrounding neighborhood of the relevant entities (to help patching in a replacement subgraph).
     """
+    print('a')
     g = fetch_knowledge_graph(graph_id=graph_id)
 
+    print('b')
     relevant_entity_ids = get_relevant_entities(
             query=query, entities=g['entities'])
+    print('c')
     neighborhood = get_knowledge_subgraph(
             entity_ids=relevant_entity_ids, graph=g, num_hops=1)
 
+    print('d')
     return neighborhood
