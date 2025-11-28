@@ -8,7 +8,7 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.models import LlmResponse
 
 from .utils import generate_random_string, remove_nonalphanumeric
-from .kg_service import fetch_knowledge_graph, store_knowledge_graph, store_graph_delta
+from kg_service import fetch_knowledge_graph, store_knowledge_graph, store_graph_delta
 
 
 def main(callback_context: CallbackContext, llm_response: LlmResponse) -> Optional[LlmResponse]:
