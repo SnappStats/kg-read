@@ -30,6 +30,26 @@ def fetch_from_database():
     return entities, relationships
 
 
+def check_entities_exist(entity_ids: set[str]) -> set[str]:
+    """Returns the subset of entity_ids that exist in the database."""
+    if not entity_ids:
+        return set()
+
+    entity_ids_list = list(entity_ids)
+    params = {'entity_ids': entity_ids_list}
+    param_types = {'entity_ids': spanner.param_types.Array(spanner.param_types.STRING)}
+
+    sql = """
+        SELECT entity_id
+        FROM entity
+        WHERE entity_id IN UNNEST(@entity_ids)
+    """
+
+    with SPANNER_DATABASE.snapshot() as snapshot:
+        results = snapshot.execute_sql(sql, params=params, param_types=param_types)
+        return {row[0] for row in results}
+
+
 def embed_entity(entity: dict) -> list[float]:
     """Embeds an entity as a 768-dimensional vector using gemini-embedding-001."""
     entity_for_embedding = {
@@ -179,7 +199,7 @@ def get_relevant_entities_from_db(
             {
                 'entity_id': row[0],
                 'entity_names': list(row[1]),
-                'properties': json.loads(row[2]) if row[2] else {},
+                'properties': dict(row[2]) if row[2] else {},
                 'distance': row[3]
             }
             for row in results
@@ -210,52 +230,63 @@ def get_knowledge_subgraph_from_db(
     params = {'entity_ids': entity_ids_list}
     param_types = {'entity_ids': spanner.param_types.Array(spanner.param_types.STRING)}
 
+    # Get neighbor entity IDs via graph traversal
     gql = f"""
-        GRAPH knowledge_graph
-        MATCH path = (start:Entity)-[r:Related]-{{1,{num_hops}}}(neighbor:Entity)
+        GRAPH entity_graph
+        MATCH (start:entity)-[:relationship]-{{1,{num_hops}}}(neighbor:entity)
         WHERE start.entity_id IN UNNEST(@entity_ids)
-        RETURN
-            start.entity_id AS start_id,
-            start.entity_names AS start_names,
-            start.properties AS start_props,
-            neighbor.entity_id AS neighbor_id,
-            neighbor.entity_names AS neighbor_names,
-            neighbor.properties AS neighbor_props,
-            r.source_entity_id AS rel_source,
-            r.target_entity_id AS rel_target,
-            r.relationship AS rel_type
+        RETURN DISTINCT neighbor.entity_id AS entity_id
     """
 
-    entities = {}
-    relationships = []
-    seen_rels = set()
-
+    neighbor_ids = set(entity_ids)  # Start with seed entities
     with SPANNER_DATABASE.snapshot() as snapshot:
         results = snapshot.execute_sql(gql, params=params, param_types=param_types)
         for row in results:
-            # Add start entity
-            if row[0] not in entities:
-                entities[row[0]] = {
-                    'entity_id': row[0],
-                    'entity_names': list(row[1]),
-                    'properties': json.loads(row[2]) if row[2] else {}
-                }
-            # Add neighbor entity
-            if row[3] not in entities:
-                entities[row[3]] = {
-                    'entity_id': row[3],
-                    'entity_names': list(row[4]),
-                    'properties': json.loads(row[5]) if row[5] else {}
-                }
-            # Add relationship (deduplicated)
-            rel_key = (row[6], row[7], row[8])
-            if rel_key not in seen_rels:
-                seen_rels.add(rel_key)
-                relationships.append({
-                    'source_entity_id': row[6],
-                    'target_entity_id': row[7],
-                    'relationship': row[8]
-                })
+            neighbor_ids.add(row[0])
+
+    # Fetch full entity data for all entities in the neighborhood
+    all_ids_list = list(neighbor_ids)
+    all_params = {'entity_ids': all_ids_list}
+    all_param_types = {'entity_ids': spanner.param_types.Array(spanner.param_types.STRING)}
+
+    entity_sql = """
+        SELECT entity_id, entity_names, properties
+        FROM entity
+        WHERE entity_id IN UNNEST(@entity_ids)
+    """
+
+    entities = {}
+    with SPANNER_DATABASE.snapshot() as snapshot:
+        entity_results = snapshot.execute_sql(entity_sql, params=all_params, param_types=all_param_types)
+        for row in entity_results:
+            entities[row[0]] = {
+                'entity_id': row[0],
+                'entity_names': list(row[1]),
+                'properties': dict(row[2]) if row[2] else {}
+            }
+
+    # Get all relationships between entities in the subgraph via graph query
+    all_entity_ids = list(entities.keys())
+    rel_params = {'entity_ids': all_entity_ids}
+    rel_param_types = {'entity_ids': spanner.param_types.Array(spanner.param_types.STRING)}
+
+    rel_gql = """
+        GRAPH entity_graph
+        MATCH (s:entity)-[r:relationship]->(t:entity)
+        WHERE s.entity_id IN UNNEST(@entity_ids)
+          AND t.entity_id IN UNNEST(@entity_ids)
+        RETURN DISTINCT r.source_entity_id, r.target_entity_id, r.relationship
+    """
+
+    relationships = []
+    with SPANNER_DATABASE.snapshot() as snapshot:
+        rel_results = snapshot.execute_sql(rel_gql, params=rel_params, param_types=rel_param_types)
+        for row in rel_results:
+            relationships.append({
+                'source_entity_id': row[0],
+                'target_entity_id': row[1],
+                'relationship': row[2]
+            })
 
     # Mark entities with external neighbors
     all_entity_ids = list(entities.keys())
@@ -263,8 +294,8 @@ def get_knowledge_subgraph_from_db(
     ext_param_types = {'entity_ids': spanner.param_types.Array(spanner.param_types.STRING)}
 
     ext_gql = """
-        GRAPH knowledge_graph
-        MATCH (e:Entity)-[:Related]-(outside:Entity)
+        GRAPH entity_graph
+        MATCH (e:entity)-[:relationship]-(outside:entity)
         WHERE e.entity_id IN UNNEST(@entity_ids)
           AND outside.entity_id NOT IN UNNEST(@entity_ids)
         RETURN DISTINCT e.entity_id AS entity_id
@@ -298,7 +329,7 @@ def get_random_entity_from_db() -> dict:
             return {
                 'entity_id': row[0],
                 'entity_names': list(row[1]),
-                'properties': json.loads(row[2]) if row[2] else {}
+                'properties': dict(row[2]) if row[2] else {}
             }
 
     return None

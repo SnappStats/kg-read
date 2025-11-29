@@ -25,8 +25,7 @@ def get_relevant_neighborhood(query: str, tool_context: ToolContext) -> dict:
     Returns:
         dict: The relevant knowledge graph data.
     '''
-    graph_id = tool_context.state['graph_id']
-    nbhd = _get_relevant_neighborhood(query=query, graph_id=graph_id)
+    nbhd = _get_relevant_neighborhood(query=query)
     tool_context.state['existing_knowledge'] = nbhd
     return nbhd
 

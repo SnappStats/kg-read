@@ -29,26 +29,26 @@ def curate_knowledge_route(
 
 @app.get('/random_neighborhood')
 @flog
-def random_neighborhood_route(graph_id: str) -> dict:
-    '''Returns a random neighborhood (entity plus neighbors) from the specified
+def random_neighborhood_route() -> dict:
+    '''Returns a random neighborhood (entity plus neighbors) from the
     knowledge graph.'''
-    return get_random_neighborhood(graph_id=graph_id)
+    return get_random_neighborhood()
 
 
 @app.get("/search")
 @flog
-def search_route(query: str, graph_id: str) -> dict:
+def search_route(query: str) -> dict:
     '''Returns a neighborhood (a set of entities plus their neighborhoods),
-    relevant to the input query, from the specified knowledge graph.''' 
-    return get_relevant_neighborhood(query=query, graph_id=graph_id)
+    relevant to the input query, from the knowledge graph.'''
+    return get_relevant_neighborhood(query=query)
 
 
 @app.get("/expand_query")
 @flog
-def expand_query_route(query: str, graph_id: str) -> str:
+def expand_query_route(query: str) -> str:
     """Returns a paragraph that relates what is contained in the knowledge
     graph, relevant to the input query."""
-    nbhd = get_relevant_neighborhood(query=query, graph_id=graph_id)
+    nbhd = get_relevant_neighborhood(query=query)
 
     relevant_entities_str = ""
     for entity in nbhd['entities'].values():
