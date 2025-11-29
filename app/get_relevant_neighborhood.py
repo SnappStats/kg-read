@@ -1,27 +1,21 @@
 from floggit import flog
 
-from utils import fetch_knowledge_graph, get_relevant_entities, get_knowledge_subgraph
+from kg_service import get_relevant_entities_from_db, get_knowledge_subgraph_from_db
 
 
 @flog
-def main(query: str, graph_id: str) -> dict:
+def main(query: str, num_hops: int = 1) -> dict:
     """
     Args:
-        query (str): A user query that might be relevanet to some entities in the knowledge graph.
-        graph_id (str): The ID of the knowledge graph to query.
+        query (str): A user query that might be relevant to some entities in the knowledge graph.
+        num_hops (int): Number of hops to traverse from relevant entities (default 1).
 
     Returns:
         dict: A relevant subgraph of the knowledge graph, including a surrounding neighborhood of the relevant entities (to help patching in a replacement subgraph).
     """
-    print('a')
-    g = fetch_knowledge_graph(graph_id=graph_id)
+    relevant_entities = get_relevant_entities_from_db(query=query)
+    relevant_entity_ids = {e['entity_id'] for e in relevant_entities}
+    neighborhood = get_knowledge_subgraph_from_db(
+            entity_ids=relevant_entity_ids, num_hops=num_hops)
 
-    print('b')
-    relevant_entity_ids = get_relevant_entities(
-            query=query, entities=g['entities'])
-    print('c')
-    neighborhood = get_knowledge_subgraph(
-            entity_ids=relevant_entity_ids, graph=g, num_hops=1)
-
-    print('d')
     return neighborhood
