@@ -8,7 +8,7 @@ from google.adk.agents.callback_context import CallbackContext
 from google.adk.models import LlmResponse
 
 from .utils import generate_random_string, remove_nonalphanumeric
-from kg_service import fetch_knowledge_graph, store_knowledge_graph, store_graph_delta
+from kg_service import store_graph_delta, check_entities_exist
 
 
 def main(callback_context: CallbackContext, llm_response: LlmResponse) -> Optional[LlmResponse]:
@@ -297,48 +297,39 @@ def _splice_subgraph(
         remove_subgraph: dict,
         add_subgraph: dict):
 
-    '''Splices new_subgraph into the knowledge graph identified by graph_id,
+    '''Splices new_subgraph into the knowledge graph in Spanner,
     excising old_subgraph first.'''
 
-    # This is where to add a lock, to be removed either if graph is erroneous or stored.
-    graph = fetch_knowledge_graph(graph_id)
+    # Collect all entity IDs referenced in relationships
+    referenced_ids = set()
+    for rel in add_subgraph['relationships']:
+        referenced_ids.add(rel['source_entity_id'])
+        referenced_ids.add(rel['target_entity_id'])
 
-    # Excise old subgraph
-    graph['entities'] = {
-            k: v
-            for k, v in graph['entities'].items()
-            if k not in remove_subgraph['entities']
-    }
-    remove_relationships = [
-            (rel['source_entity_id'], rel['target_entity_id'])
-            for rel in remove_subgraph['relationships']
-    ]
-    graph['relationships'] = [
-            rel for rel in graph['relationships']
-            if (rel['source_entity_id'], rel['target_entity_id'])
-            not in remove_relationships
-    ]
+    # Identify external references (not in add_subgraph)
+    add_entity_ids = set(add_subgraph['entities'].keys())
+    external_refs = referenced_ids - add_entity_ids
 
-    # Insert new subgraph
-    graph['entities'].update(
-            add_subgraph['entities'])
-    graph['relationships'].extend(
-            add_subgraph['relationships'])
+    # Verify external references exist in the database
+    if external_refs:
+        existing_external = check_entities_exist(external_refs)
+        missing_refs = external_refs - existing_external
+    else:
+        missing_refs = set()
 
-    if invalid_entity_ids := _get_invalid_relationship_entity_ids(graph):
+    if missing_refs:
         logging.warning(
-            'Graph delta not recorded due to invalid relationship entity IDs.',
+            'Graph delta not recorded due to missing external entity references.',
             extra={
                 'json_fields': {
                     'graph_id': graph_id,
-                    'invalid_relationship_entity_ids': list(invalid_entity_ids)
+                    'missing_entity_ids': list(missing_refs)
                 }
             }
         )
     else:
         store_graph_delta(
                 remove_subgraph=remove_subgraph, add_subgraph=add_subgraph)
-        store_knowledge_graph(knowledge_graph=graph, graph_id=graph_id)
 
 
 @flog
