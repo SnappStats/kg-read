@@ -21,15 +21,6 @@ vertexai.init(project=PROJECT_ID)
 EMBEDDING_MODEL = TextEmbeddingModel.from_pretrained("gemini-embedding-001")
 
 
-def fetch_from_database():
-    with SPANNER_DATABASE.snapshot() as snapshot:
-        entities = snapshot.execute_sql("select * from entity")
-    with SPANNER_DATABASE.snapshot() as snapshot:
-        relationships = snapshot.execute_sql("select * from relationship")
-
-    return entities, relationships
-
-
 def check_entities_exist(entity_ids: set[str]) -> set[str]:
     """Returns the subset of entity_ids that exist in the database."""
     if not entity_ids:
